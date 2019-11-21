@@ -1,0 +1,13 @@
+version: "3.3"
+services:
+  docker:
+    build: ./
+    volumes:
+      - ./:/src
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: python3 -u /src/server.py
+    environment:
+      - MYID=
+      - BEARER=
+    ports:
+      - "80:80"
