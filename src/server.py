@@ -43,7 +43,8 @@ def format_text(text):
 def start_container(name):
     """Starts container with a given container name"""
     container = CLIENT.containers.run('teamsterminal_docker', ['tail', '-f', '/dev/null'],
-                                      cpu_percent=10,
+                                      cpu_period=100000,
+                                      cpu_quota=10000,
                                       mem_limit='25m',
                                       name=str(name),
                                       detach=True)
