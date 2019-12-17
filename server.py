@@ -1,5 +1,6 @@
 __author__ = 'Zachery Thomas'
 
+import re
 import os
 import json
 import time
@@ -20,6 +21,29 @@ HEADERS = {"Authorization": "Bearer {}".format(BEARER)}
 MAX_MSG_LEN = 7000
 TIMEOUT = 10
 
+
+def format_text(text):
+    """Formats text to right input for sh command"""
+
+    chars = {
+        '“': '"',
+        '”': '"',
+        '‘': "'",
+        '’': "'",
+        '“': '"',
+        '”': '"',
+        '"': '"',
+    }
+
+    text = text.replace('Terminal', '')
+
+    for char in chars:
+        text = text.replace(char, chars[char])
+
+    text = text.strip()
+    return text
+
+
 def start_container(name):
     """Starts container with a given container name"""
     container = CLIENT.containers.run('teamsterminal_docker', ['tail', '-f', '/dev/null'],
@@ -32,7 +56,8 @@ def start_container(name):
 
 def run_command(container, cmd):
     """Runs command given container obj and cmd string"""
-    cmd = 'sh -c "{}"'.format(str(cmd))
+    cmd = 'sh -c """{}"""'.format(str(cmd))
+    print('cmd: ', cmd)
 
     try:
         res = container.exec_run(cmd)
@@ -100,18 +125,23 @@ def messages():
 
     print(res.json())
     text = res.json()['text']
-    text = text.replace('Terminal', '')
-    text = text.strip()
+    text = format_text(text)
+
+    res = requests.get(url = "https://api.ciscospark.com/v1/rooms/{}".format(roomId),
+                headers = HEADERS)
+
+    room_name =res.json()['title']
+    container_name = roomId[-10:] + '_' + re.sub('[\W]', '_', room_name)
 
     print('text: {}'.format(text))
-    print('container name: {}'.format(roomId))
+    print('container name: {}'.format(container_name))
     try:
-        container = CLIENT.containers.get(roomId)
+        container = CLIENT.containers.get(container_name)
 
     except docker.errors.NotFound:
-        print('Container not found for {}, starting one...'.format(roomId))
-        container = start_container(roomId)
-        print('Started container for {}'.format(roomId))
+        print('Container not found for {}, starting one...'.format(container_name))
+        container = start_container(container_name)
+        print('Started container for {}'.format(container_name))
 
     wt = WortherThread(container)
     wt.start()
