@@ -17,6 +17,8 @@ BEARER = os.getenv('BEARER')
 MYID = os.getenv('MYID')
 HEADERS = {"Authorization": "Bearer {}".format(BEARER)}
 
+MAX_MSG_LEN = 7000
+TIMEOUT = 10
 
 def start_container(name):
     """Starts container with a given container name"""
@@ -44,7 +46,7 @@ class WortherThread (threading.Thread):
     def __init__(self, container):
         threading.Thread.__init__(self)
         self.container = container
-        self.timeout = 10
+        self.timeout = TIMEOUT
         self._running = True
         self.completed = True
 
@@ -118,6 +120,9 @@ def messages():
     res_text, res_code = run_command(container, text)
     wt.terminate()
     print(res_text, res_code)
+
+    if len(res_text) >= MAX_MSG_LEN:
+        res_text = res_text[0:int(MAX_MSG_LEN / 4)] + '\n...\n' + res_text[- int(MAX_MSG_LEN / 4):]
 
 
     # post resposne to room as joeybot
