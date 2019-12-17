@@ -5,7 +5,6 @@ import os
 import json
 import time
 import threading
-import random
 
 import docker
 import requests
@@ -29,8 +28,6 @@ def format_text(text):
         '”': '"',
         '‘': "'",
         '’': "'",
-        '“': '"',
-        '”': '"',
         '"': '"',
     }
 
@@ -53,6 +50,41 @@ def start_container(name):
     return container
 
 
+def get_message(message_id):
+    """Calls message api to get text based on message_id"""
+    res = requests.get(url="https://api.ciscospark.com/v1/messages/{}".format(message_id),
+                       headers=HEADERS)
+
+    print(res.json())
+    text = res.json()['text']
+    text = format_text(text)
+
+    return text
+
+
+def send_message(markdown, room_id):
+    """Sends message to api based on markdown and room_id"""
+        # post resposne to room as joeybot
+    res = requests.post(url="https://api.ciscospark.com/v1/messages",
+                        headers=HEADERS,
+                        data={
+                            "markdown": markdown,
+                            "roomId": room_id
+                        })
+
+    return res
+
+
+def get_room_name(room_id):
+    """Calls room api to get room name based on room_id"""
+    res = requests.get(url="https://api.ciscospark.com/v1/rooms/{}".format(room_id),
+                       headers=HEADERS)
+
+    room_name = res.json()['title']
+
+    return room_name
+
+
 def run_command(container, cmd):
     """Runs command given container obj and cmd string"""
     cmd = 'sh -c """{}"""'.format(str(cmd))
@@ -66,7 +98,7 @@ def run_command(container, cmd):
         return str(exc), 1
 
 
-class WortherThread (threading.Thread):
+class WortherThread(threading.Thread):
     def __init__(self, container):
         threading.Thread.__init__(self)
         self.container = container
@@ -94,43 +126,20 @@ def messages():
     print('got post!')
     data = json.loads(request.body.read())['data']
 
-    roomId = data['roomId']
-    personId = data['personId']
-    messageId = data['id']
+    room_id = data['roomId']
+    person_id = data['personId']
+    message_id = data['id']
 
-    # Ban Adam Davis
-    if personId == '<ADAM DAVIS\' PERSONAL ID>':
-        adam_resposnes = [
-            'Oh no, im not falling for that again Adam.',
-            'Nice try, bucko!',
-            'Beep boop!'
-        ]
 
-        res = requests.post(url = "https://api.ciscospark.com/v1/messages",
-                    headers = HEADERS,
-                    data = {
-                                "markdown": '{} Adam is banned!'.format(random.choice(adam_resposnes)),
-                                "roomId": roomId
-                            })
-
+    print(person_id, MYID)
+    if person_id == MYID:
         return
 
-    print(personId, MYID)
-    if personId == MYID:
-        return
+    text = get_message(message_id)
 
-    res = requests.get(url = "https://api.ciscospark.com/v1/messages/{}".format(messageId),
-                headers = HEADERS)
+    room_name = get_room_name(room_id)
 
-    print(res.json())
-    text = res.json()['text']
-    text = format_text(text)
-
-    res = requests.get(url = "https://api.ciscospark.com/v1/rooms/{}".format(roomId),
-                headers = HEADERS)
-
-    room_name =res.json()['title']
-    container_name = roomId[-10:] + '_' + re.sub('[\W]', '_', room_name)
+    container_name = room_id[-10:] + '_' + re.sub(r'[\W]', '_', room_name)
 
     print('text: {}'.format(text))
     print('container name: {}'.format(container_name))
@@ -153,18 +162,13 @@ def messages():
     if len(res_text) >= MAX_MSG_LEN:
         res_text = res_text[0:int(MAX_MSG_LEN / 4)] + '\n...\n' + res_text[- int(MAX_MSG_LEN / 4):]
 
-
-    # post resposne to room as joeybot
-    res = requests.post(url = "https://api.ciscospark.com/v1/messages",
-                headers = HEADERS,
-                data = {
-                            "markdown": """```bash
+    markdown = """```bash
 >_ {}
 
 {}
-```""".format(text, res_text),
-                            "roomId": roomId
-                        })
+```""".format(text, res_text)
+
+    res = send_message(markdown, room_id)
 
     print(res.text)
     print('response from bot post: {}'.format(res.json()))
