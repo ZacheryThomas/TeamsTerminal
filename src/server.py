@@ -9,7 +9,6 @@ import random
 
 import docker
 import requests
-import bottle
 from bottle import post, request, run
 
 CLIENT = docker.from_env()

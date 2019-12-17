@@ -1,9 +1,9 @@
 version: "3.3"
 services:
-  docker:
+  server:
     build: ./
     volumes:
-      - ./:/src
+      - ./src/:/src
       - /var/run/docker.sock:/var/run/docker.sock
     command: python3 -u /src/server.py
     environment:
@@ -11,3 +11,10 @@ services:
       - BEARER=
     ports:
       - "80:80"
+
+  terminator:
+    build: ./
+    volumes:
+      - ./src/:/src
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: python3 -u /src/terminator.py
